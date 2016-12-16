@@ -263,7 +263,6 @@ public class SubscriberSampler extends AbstractSampler implements Interruptible,
         if (StringUtils.isEmpty(clientId)) {
             clientId = Utils.UUIDGenerator();
         }
-
         // Quality
         int qos = 0;
         if (Constants.MQTT_AT_MOST_ONCE.equals(getQOS())) {
@@ -329,7 +328,7 @@ public class SubscriberSampler extends AbstractSampler implements Interruptible,
                                           " a retained message : " + receivedMessage.isRetained());
                 result.setBytes(receivedMessage.getPayload().length);
                 result.setResponseData(receivedMessage.getPayload());
-                result.setResponseCodeOK();
+                result.setResponseCode("OK");
                 return result;
             }
         }

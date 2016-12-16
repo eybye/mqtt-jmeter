@@ -44,8 +44,7 @@ public class PublisherSampler extends AbstractSampler implements TestStateListen
 
     private transient BaseClient client;
     private int qos = 0;
-    private String topicName = StringUtils.EMPTY;
-    private String publishMessage = StringUtils.EMPTY;
+    //private String topicName = StringUtils.EMPTY;
     private boolean retained;
     private AtomicInteger publishedMessageCount = new AtomicInteger(0);
     private static final String nameLabel = "MQTT Publisher";
@@ -223,14 +222,12 @@ public class PublisherSampler extends AbstractSampler implements TestStateListen
     private void initClient() throws MqttException {
         String brokerURL = getBrokerUrl();
         String clientId = getClientId();
-        topicName = getTopicName();
         retained = isMessageRetained();
         boolean isCleanSession = isCleanSession();
         int keepAlive = getKeepAlive();
         String userName = getUsername();
         String password = getPassword();
         String clientType = getClientType();
-        String messageInputType = getMessageInputType();
 
         // Generating client ID if empty
         if (StringUtils.isEmpty(clientId)) {
@@ -244,12 +241,6 @@ public class PublisherSampler extends AbstractSampler implements TestStateListen
             qos = 1;
         } else if (Constants.MQTT_EXACTLY_ONCE.equals(getQOS())) {
             qos = 2;
-        }
-
-        if (Constants.MQTT_MESSAGE_INPUT_TYPE_TEXT.equals(messageInputType)) {
-            publishMessage = getMessageValue();
-        } else if (Constants.MQTT_MESSAGE_INPUT_TYPE_FILE.equals(messageInputType)) {
-            publishMessage = Utils.getFileContent(getMessageValue());
         }
 
         try {
@@ -267,7 +258,6 @@ public class PublisherSampler extends AbstractSampler implements TestStateListen
             throw e;
         }
     }
-
     /**
      * {@inheritDoc}
      */
@@ -276,6 +266,10 @@ public class PublisherSampler extends AbstractSampler implements TestStateListen
         SampleResult result = new SampleResult();
         result.setSampleLabel(getNameLabel());
         result.sampleStart();
+        String messageInputType = getMessageInputType();
+        String publishMessage = StringUtils.EMPTY;
+        String topicName = getTopicName();
+
         if (client == null || !client.isConnected()) {
             try {
                 initClient();
@@ -293,7 +287,19 @@ public class PublisherSampler extends AbstractSampler implements TestStateListen
             }
         }
         try {
-            client.publish(topicName, qos, publishMessage.getBytes(), retained);
+            
+            if (Constants.MQTT_MESSAGE_INPUT_TYPE_TEXT.equals(messageInputType)) {
+                publishMessage = getMessageValue();
+            } else if (Constants.MQTT_MESSAGE_INPUT_TYPE_FILE.equals(messageInputType)) {
+                publishMessage = Utils.getFileContent(getMessageValue());
+            }
+
+            if (publishMessage.startsWith("\\x")) {
+                client.publish(topicName, qos, Utils.hexStringToByteArray(publishMessage.substring(2)), retained);
+            }
+            else {
+                client.publish(topicName, qos, publishMessage.getBytes(), retained);
+            }
             result.setSuccessful(true);
             result.sampleEnd(); // stop stopwatch
             result.setResponseMessage("Sent " + publishedMessageCount.incrementAndGet() + " messages total");

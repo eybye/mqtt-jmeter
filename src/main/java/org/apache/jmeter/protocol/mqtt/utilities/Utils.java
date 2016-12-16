@@ -18,6 +18,9 @@ package org.apache.jmeter.protocol.mqtt.utilities;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.jorphan.io.TextFile;
+import org.apache.jmeter.threads.JMeterContextService;
+import org.apache.jmeter.threads.JMeterVariables;
+import org.apache.log.Logger;
 
 /**
  * Utility class for plugin
@@ -45,5 +48,41 @@ public class Utils {
     public static String getFileContent(String path) {
         TextFile tf = new TextFile(path);
         return tf.getText();
+    }
+
+    public static byte[] hexStringToByteArray(String s) {
+        int len = s.length();
+        byte[] data = new byte[len / 2];
+        for (int i = 0; i < len; i += 2) {
+            data[i / 2] = (byte) ((Character.digit(s.charAt(i), 16) << 4)
+                    + Character.digit(s.charAt(i+1), 16));
+        }
+        return data;
+    }
+
+    public static String replaceVariables(String inputString, Logger log) {
+        JMeterVariables jmvari = JMeterContextService.getContext()
+            .getVariables();
+
+        String outString = StringUtils.EMPTY;
+
+        int idxStart = inputString.indexOf("${");
+        int idxStop = 0;
+        while (idxStart != -1) {
+            outString = outString.concat(inputString.substring(idxStart));
+            idxStart += 2;
+            idxStop = inputString.indexOf("}", idxStart);
+            String varName = inputString.substring(idxStart, idxStop);
+            log.info("Variable: " + varName);
+            idxStop += 1;
+            String var = jmvari.get(varName);
+            log.info("Variable content: " + var);
+            outString = outString.concat(var);
+
+            idxStart = inputString.indexOf("${", idxStop);
+        }
+        outString = outString.concat(inputString.substring(idxStop, inputString.length()));
+        log.info("Final string: " + outString);
+        return outString;
     }
 }
